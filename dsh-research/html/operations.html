@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DeepSeek Harness 常用命令与上游同步操作手册</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    :root {
+      --bg-primary: #0f172a;
+      --bg-secondary: #1e293b;
+      --bg-tertiary: #334155;
+      --text-primary: #f8fafc;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      --accent: #38bdf8;
+      --accent-rgb: 56, 189, 248;
+      --accent-glow: rgba(56, 189, 248, 0.18);
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --purple: #a855f7;
+      --border: #334155;
+      --border-focus: #38bdf8;
+      --card-bg: rgba(30, 41, 59, 0.72);
+      --code-bg: #0b1120;
+      --shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
+      --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    [data-theme="light"] {
+      --bg-primary: #f8fafc;
+      --bg-secondary: #ffffff;
+      --bg-tertiary: #f1f5f9;
+      --text-primary: #0f172a;
+      --text-secondary: #475569;
+      --text-muted: #94a3b8;
+      --accent: #0284c7;
+      --accent-rgb: 2, 132, 199;
+      --accent-glow: rgba(2, 132, 199, 0.12);
+      --border: #e2e8f0;
+      --border-focus: #0284c7;
+      --card-bg: rgba(255, 255, 255, 0.88);
+      --code-bg: #f8fafc;
+      --shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.65;
+      transition: background-color 0.3s ease, color 0.3s ease;
+      background-image:
+        radial-gradient(circle at 15% 15%, rgba(56, 189, 248, 0.06) 0%, transparent 40%),
+        radial-gradient(circle at 85% 85%, rgba(168, 85, 247, 0.06) 0%, transparent 40%);
+      background-attachment: fixed;
+    }
+
+    .container {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 40px 24px 100px;
+    }
+
+    header {
+      margin-bottom: 36px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 28px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+
+    .header-content h1 {
+      font-size: 2.25rem;
+      font-weight: 800;
+      letter-spacing: -0.025em;
+      background: linear-gradient(135deg, var(--text-primary) 30%, var(--accent));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 8px;
+    }
+
+    .header-content p {
+      color: var(--text-secondary);
+      font-size: 1.05rem;
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 16px;
+      border-radius: var(--radius-sm);
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid var(--border);
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      transition: var(--transition);
+      text-decoration: none;
+    }
+
+    .btn:hover {
+      border-color: var(--accent);
+      background: var(--bg-tertiary);
+      transform: translateY(-1px);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #0284c7, #38bdf8);
+      color: #ffffff;
+      border: none;
+      box-shadow: 0 4px 14px rgba(56, 189, 248, 0.35);
+    }
+
+    .btn-primary:hover {
+      box-shadow: 0 6px 20px rgba(56, 189, 248, 0.5);
+      background: linear-gradient(135deg, #0369a1, #0ea5e9);
+    }
+
+    /* Tabs Navigation */
+    .tabs-nav {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 32px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 12px;
+      overflow-x: auto;
+    }
+
+    .tab-btn {
+      padding: 10px 18px;
+      border-radius: var(--radius-sm);
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--text-secondary);
+      font-weight: 600;
+      font-size: 0.95rem;
+      cursor: pointer;
+      transition: var(--transition);
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .tab-btn:hover {
+      color: var(--text-primary);
+      background: var(--bg-secondary);
+    }
+
+    .tab-btn.active {
+      color: var(--accent);
+      background: var(--accent-glow);
+      border-color: rgba(var(--accent-rgb), 0.3);
+    }
+
+    .tab-content {
+      display: none;
+      animation: fadeIn 0.3s ease;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Cards */
+    .card {
+      background: var(--card-bg);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 24px;
+      margin-bottom: 24px;
+      box-shadow: var(--shadow);
+      transition: var(--transition);
+    }
+
+    .card:hover {
+      border-color: rgba(var(--accent-rgb), 0.35);
+    }
+
+    .card-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--text-primary);
+    }
+
+    .card-title .badge {
+      font-size: 0.75rem;
+      padding: 3px 8px;
+      border-radius: 9999px;
+      background: var(--accent-glow);
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    /* Code Box with Copy Button */
+    .code-box {
+      position: relative;
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 16px;
+      margin: 12px 0 16px;
+      overflow-x: auto;
+    }
+
+    .code-box pre {
+      font-family: 'Fira Code', monospace;
+      font-size: 0.88rem;
+      line-height: 1.6;
+      color: #e2e8f0;
+    }
+
+    [data-theme="light"] .code-box pre {
+      color: #1e293b;
+    }
+
+    .copy-btn {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      padding: 5px 10px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--bg-secondary);
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: var(--transition);
+    }
+
+    .copy-btn:hover {
+      color: var(--text-primary);
+      border-color: var(--accent);
+      background: var(--bg-tertiary);
+    }
+
+    .copy-btn.copied {
+      background: var(--success);
+      color: #ffffff;
+      border-color: var(--success);
+    }
+
+    /* Tables */
+    .table-container {
+      overflow-x: auto;
+      margin: 16px 0;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 0.92rem;
+    }
+
+    th, td {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    th {
+      background: var(--bg-secondary);
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    tr:hover td {
+      background: rgba(var(--accent-rgb), 0.03);
+    }
+
+    /* Step Sequence */
+    .step-list {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      margin: 16px 0;
+    }
+
+    .step-item {
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+    }
+
+    .step-number {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--accent-glow);
+      color: var(--accent);
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      border: 1px solid rgba(var(--accent-rgb), 0.4);
+    }
+
+    .step-body {
+      flex: 1;
+    }
+
+    .step-body h4 {
+      font-size: 1.05rem;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .step-body p {
+      color: var(--text-secondary);
+      font-size: 0.92rem;
+      margin-bottom: 8px;
+    }
+
+    /* Alert Banner */
+    .alert {
+      padding: 14px 18px;
+      border-radius: var(--radius-sm);
+      margin: 14px 0;
+      font-size: 0.92rem;
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      border: 1px solid transparent;
+    }
+
+    .alert-info {
+      background: rgba(56, 189, 248, 0.1);
+      border-color: rgba(56, 189, 248, 0.25);
+      color: var(--text-primary);
+    }
+
+    .alert-success {
+      background: rgba(16, 185, 129, 0.1);
+      border-color: rgba(16, 185, 129, 0.25);
+      color: var(--text-primary);
+    }
+
+    .alert-warning {
+      background: rgba(245, 158, 11, 0.1);
+      border-color: rgba(245, 158, 11, 0.25);
+      color: var(--text-primary);
+    }
+
+    .mermaid {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 20px;
+      margin: 16px 0;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <div class="header-content">
+      <h1>🚀 DeepSeek Harness 常用命令与上游同步手册</h1>
+      <p>日常高频启动命令、官方代码 3 步同步、多端协作与工程质量门禁操作中心</p>
+    </div>
+    <div class="header-actions">
+      <a href="architecture.html" class="btn">🏛️ 查看架构全景</a>
+      <a href="../OPERATIONS.md" class="btn">📄 查看 Markdown 手册</a>
+      <button class="btn" id="theme-toggle" onclick="toggleTheme()">🌓 切换主题</button>
+    </div>
+  </header>
+
+  <!-- Tabs Navigation -->
+  <div class="tabs-nav">
+    <button class="tab-btn active" onclick="switchTab('tab-sync')">🔄 上游代码同步与协作</button>
+    <button class="tab-btn" onclick="switchTab('tab-launch')">⚡ 核心启动模式</button>
+    <button class="tab-btn" onclick="switchTab('tab-env')">🛠️ 环境初始化与配置</button>
+    <button class="tab-btn" onclick="switchTab('tab-gates')">🛡️ 质量门禁与测试</button>
+    <button class="tab-btn" onclick="switchTab('tab-debug')">🔍 诊断排错与排障</button>
+  </div>
+
+  <!-- TAB 1: 上游代码同步与多端协作 -->
+  <div id="tab-sync" class="tab-content active">
+    <div class="card">
+      <div class="card-title">
+        <span>🌐 仓库拓扑与双端架构</span>
+        <span class="badge">Git Workflow</span>
+      </div>
+      <p style="color: var(--text-secondary); margin-bottom: 12px;">
+        本项目已打通 <code>upstream</code>（DeepSeek 官方开源主库）与 <code>origin</code>（你的个人 GitHub Fork 仓库）的双向协同通道，研究文件均置于 <code>dsh-research/</code>，更新时零冲突。
+      </p>
+
+      <div class="mermaid">
+graph LR
+    A["🏢 DeepSeek 官方仓库 (upstream)<br>deepseek-ai/deepseek-harness"] -->|git fetch upstream| B["💻 本地工作区分支 (my-branch)<br>c:\DeepSeek\deepseek-harness"]
+    B -->|git push origin| C["☁️ 你的个人 GitHub (origin)<br>YanmingChu/deepseek-harness"]
+    style A fill:#1e293b,stroke:#a855f7,stroke-width:2px,color:#f8fafc
+    style B fill:#1e293b,stroke:#38bdf8,stroke-width:2px,color:#f8fafc
+    style C fill:#1e293b,stroke:#10b981,stroke-width:2px,color:#f8fafc
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">
+        <span>⚡ 日常 3 步同步官方最新代码</span>
+        <span class="badge">高频推荐</span>
+      </div>
+
+      <div class="step-list">
+        <div class="step-item">
+          <div class="step-number">1</div>
+          <div class="step-body">
+            <h4>拉取 DeepSeek 官方主仓的最新提交</h4>
+            <p>从 <code>upstream</code> 获取官方最新合并的 PR、功能和 Bug 修复：</p>
+            <div class="code-box">
+              <button class="copy-btn" onclick="copyText('git fetch upstream')">复制</button>
+              <pre><code>git fetch upstream</code></pre>
+            </div>
+          </div>
+        </div>
+
+        <div class="step-item">
+          <div class="step-number">2</div>
+          <div class="step-body">
+            <h4>将官方 master 分支合并到你的研究分支</h4>
+            <p>合并最新官方主干，由于研究笔记在 <code>dsh-research/</code>，可以无缝平滑合并：</p>
+            <div class="code-box">
+              <button class="copy-btn" onclick="copyText('git merge upstream/master')">复制</button>
+              <pre><code>git merge upstream/master</code></pre>
+            </div>
+          </div>
+        </div>
+
+        <div class="step-item">
+          <div class="step-number">3</div>
+          <div class="step-body">
+            <h4>推送到你的云端个人仓库</h4>
+            <p>将合并后的最新代码同步到你的个人 GitHub Fork 仓库中：</p>
+            <div class="code-box">
+              <button class="copy-btn" onclick="copyText('git push origin my-branch')">复制</button>
+              <pre><code>git push origin my-branch</code></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">
+        <span>💻 在其他新电脑上同步研究</span>
+        <span class="badge">多端开发</span>
+      </div>
+      <p style="color: var(--text-secondary); margin-bottom: 12px;">换到新电脑时，克隆个人仓库并绑定上游源：</p>
+      <div class="code-box">
+        <button class="copy-btn" onclick="copyCode(this)">复制</button>
+        <pre><code># 1. 克隆个人 Fork 仓库
+git clone git@github.com:YanmingChu/deepseek-harness.git
+cd deepseek-harness
+
+# 2. 切换到专属研究分支
+git checkout my-branch
+
+# 3. 关联官方上游仓库
+git remote add upstream https://github.com/deepseek-ai/deepseek-harness
+
+# 4. 安装依赖并完成首轮全量构建
+pnpm install
+pnpm run build</code></pre>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">
+        <span>🔑 SSH 代理配置与连通性验证</span>
+        <span class="badge">免密稳定</span>
+      </div>
+      <p style="color: var(--text-secondary);">已配置 SOCKS5 代理隧道（端口 7890），可随时验证连通性：</p>
+      <div class="code-box">
+        <button class="copy-btn" onclick="copyText('ssh -T git@github.com')">复制</button>
+        <pre><code>ssh -T git@github.com</code></pre>
+      </div>
+      <div class="alert alert-success">
+        <span>✅ 正常返回：<code>Hi YanmingChu! You've successfully authenticated, but GitHub does not provide shell access.</code></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 2: 核心启动模式 -->
+  <div id="tab-launch" class="tab-content">
+    <div class="card">
+      <div class="card-title">
+        <span>🚀 启动命令速查表</span>
+      </div>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>启动模式</th>
+              <th>执行命令</th>
+              <th>说明与场景</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Web 控制台</strong></td>
+              <td><code>pnpm dsh web</code></td>
+              <td>启动完整图形化 Web 界面（默认 <code>http://127.0.0.1:3080</code>）</td>
+            </tr>
+            <tr>
+              <td><strong>前端 UI 热更开发</strong></td>
+              <td><code>cd apps/web && pnpm run dev</code></td>
+              <td>启动 Vite 开发服务器，UI 修改毫秒级热更新，强烈推荐界面定制使用</td>
+            </tr>
+            <tr>
+              <td><strong>Headless 命令行</strong></td>
+              <td><code>pnpm dsh --profile headless "分析工作区"</code></td>
+              <td>无 UI 快速单次执行任务并直接在终端输出结果</td>
+            </tr>
+            <tr>
+              <td><strong>ACP 协议服务端</strong></td>
+              <td><code>pnpm run demo:acp</code></td>
+              <td>启动 Agent Client Protocol 自动化服务，供外部编辑器/客户端接入</td>
+            </tr>
+            <tr>
+              <td><strong>运行时自修改演示</strong></td>
+              <td><code>pnpm run demo:cordis</code></td>
+              <td>演示 Agent 在运行中自我检查与挂载新插件</td>
+            </tr>
+            <tr>
+              <td><strong>配置树诊断</strong></td>
+              <td><code>pnpm dsh --profile web --dump-config</code></td>
+              <td>打印解析后的 Cordis 完整插件配置树，排查插件未生效问题</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">
+        <span>📋 快速复制常用运行指令</span>
+      </div>
+      <div class="step-list">
+        <div>
+          <h4 style="margin-bottom: 6px;">1. 启动 Web 控制台：</h4>
+          <div class="code-box">
+            <button class="copy-btn" onclick="copyText('pnpm dsh web')">复制</button>
+            <pre><code>pnpm dsh web</code></pre>
+          </div>
+        </div>
+        <div>
+          <h4 style="margin-bottom: 6px;">2. Headless 模式运行单次分析：</h4>
+          <div class="code-box">
+            <button class="copy-btn" onclick="copyText('pnpm dsh --profile headless &quot;请分析 packages/core/ 的架构设计&quot;')">复制</button>
+            <pre><code>pnpm dsh --profile headless "请分析 packages/core/ 的架构设计"</code></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 3: 环境初始化与配置 -->
+  <div id="tab-env" class="tab-content">
+    <div class="card">
+      <div class="card-title">
+        <span>⚙️ 工作区初始化与构建</span>
+      </div>
+      <div class="code-box">
+        <button class="copy-btn" onclick="copyCode(this)">复制</button>
+        <pre><code># 1. 安装工作区依赖
+pnpm install
+
+# 2. 全量编译构建 (tsc 生成类型 + tsdown 打包)
+pnpm run build
+
+# 3. 清理所有编译产物 (排查幽灵构建错误)
+pnpm run clean</code></pre>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">
+        <span>🔑 环境变量配置 (.env)</span>
+      </div>
+      <p style="color: var(--text-secondary); margin-bottom: 12px;">在根目录 <code>.env</code> 中配置你的 API Key：</p>
+      <div class="code-box">
+        <button class="copy-btn" onclick="copyCode(this)">复制</button>
+        <pre><code># DeepSeek 官方 API Key (必填)
+DEEPSEEK_API_KEY="sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+
+# 可选：自定义模型 Base URL
+# DEEPSEEK_BASE_URL="https://api.deepseek.com/v1"
+
+# 可选：联网搜索 API Key
+# PERPLEXITY_API_KEY="pplx-xxxxxxxxxxxxxxxx"
+# EXA_API_KEY="xxxxxxxxxxxxxxxx"</code></pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 4: 质量门禁与测试 -->
+  <div id="tab-gates" class="tab-content">
+    <div class="card">
+      <div class="card-title">
+        <span>🛡️ 工程质量门禁指令清单</span>
+      </div>
+      <div class="code-box">
+        <button class="copy-btn" onclick="copyCode(this)">复制</button>
+        <pre><code># 1. 快速单元测试
+pnpm run test
+
+# 2. CI 全量测试覆盖率门禁 (要求 100% 覆盖)
+pnpm run test:coverage
+
+# 3. TypeScript 全局类型检查
+pnpm run typecheck
+
+# 4. 代码静态检查 (Oxlint)
+pnpm run lint
+
+# 5. 代码重复度检测
+pnpm run duplication
+
+# 6. 工作区依赖与合规检查 (Knip + Publint)
+pnpm run hygiene
+
+# 7. 文档与双语同步门禁
+pnpm run doc-sync</code></pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 5: 诊断排错与排障 -->
+  <div id="tab-debug" class="tab-content">
+    <div class="card">
+      <div class="card-title">
+        <span>🔍 常见问题与快速排错</span>
+      </div>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>问题现象</th>
+              <th>可能原因</th>
+              <th>排查与解决方案</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>Connection was reset</code></td>
+              <td>Git 未走代理或代理端口未监听</td>
+              <td>检查代理软件是否开启 <code>7890</code> 端口，并运行 <code>ssh -T git@github.com</code> 测试。</td>
+            </tr>
+            <tr>
+              <td><code>typecheck 找不到模块声明</code></td>
+              <td>工作区尚未完成 TypeScript 构建</td>
+              <td>执行 <code>pnpm run build</code> 生成 <code>lib/</code> 目录声明文件。</td>
+            </tr>
+            <tr>
+              <td><code>Web 控制台调用模型无响应</code></td>
+              <td>根目录未提供有效 <code>DEEPSEEK_API_KEY</code></td>
+              <td>检查 <code>.env</code> 文件中的 Key 是否有效，或检查代理是否允许连接 <code>api.deepseek.com</code>。</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'default',
+    securityLevel: 'loose'
+  });
+
+  function switchTab(tabId) {
+    document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+    const target = document.getElementById(tabId);
+    if (target) target.classList.add('active');
+    event.currentTarget.classList.add('active');
+  }
+
+  function toggleTheme() {
+    const html = document.documentElement;
+    const current = html.getAttribute('data-theme');
+    const next = current === 'dark' ? 'light' : 'dark';
+    html.setAttribute('data-theme', next);
+    localStorage.setItem('dsh_theme', next);
+    location.reload();
+  }
+
+  const savedTheme = localStorage.getItem('dsh_theme');
+  if (savedTheme) {
+    document.documentElement.setAttribute('data-theme', savedTheme);
+  }
+
+  function copyText(text) {
+    navigator.clipboard.writeText(text).then(() => {
+      const btn = event.target;
+      const original = btn.innerText;
+      btn.innerText = '已复制!';
+      btn.classList.add('copied');
+      setTimeout(() => {
+        btn.innerText = original;
+        btn.classList.remove('copied');
+      }, 2000);
+    });
+  }
+
+  function copyCode(btn) {
+    const code = btn.nextElementSibling.querySelector('code').innerText;
+    navigator.clipboard.writeText(code).then(() => {
+      const original = btn.innerText;
+      btn.innerText = '已复制!';
+      btn.classList.add('copied');
+      setTimeout(() => {
+        btn.innerText = original;
+        btn.classList.remove('copied');
+      }, 2000);
+    });
+  }
+</script>
+</body>
+</html>

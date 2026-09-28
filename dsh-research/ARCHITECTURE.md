@@ -1,6 +1,11 @@
 # 🚀 DeepSeek Harness (`dsh`) 架构研究与开发全景指南
 
 > 💡 **一句话核心定位**：DeepSeek 官方开源的 Agent 运行底座与执行中枢（Everything is a Plugin），以微内核架构驱动大语言模型在本地环境感知、决策与执行。
+>
+> 📌 **相关资源导航**：
+> - 常用命令与上游同步手册：[OPERATIONS.md](file:///c:/DeepSeek/deepseek-harness/dsh-research/OPERATIONS.md)
+> - 交互式网页仪表盘：[html/architecture.html](file:///c:/DeepSeek/deepseek-harness/dsh-research/html/architecture.html)
+> - 研究工作区总目录：[README.md](file:///c:/DeepSeek/deepseek-harness/dsh-research/README.md)
 
 ---
 
@@ -18,8 +23,6 @@
   - [3.1 轮次生命周期时序 (Mermaid)](#31-轮次生命周期时序)
   - [3.2 阶段核心逻辑解析](#32-阶段核心逻辑解析)
 - [4. 快速运行与常用命令](#-4-快速运行与常用命令)
-  - [4.1 启动模式](#41-启动模式)
-  - [4.2 工程与质量检查](#42-工程与质量检查)
 - [5. 六大专题研究与二次开发路线](#-5-六大专题研究与二次开发路线)
 - [6. 核心官方文档与扩展手册](#-6-核心官方文档与扩展手册)
 - [7. 🎨 HTML 文档生成规范与样式设计准则 (AI 维护协议)](#-7--html-文档生成规范与样式设计准则-ai-维护协议)
@@ -133,7 +136,7 @@ deepseek-harness/
 │   └── CLAUDE.md                # 软链接指向 AGENTS.md
 │
 ├── 🔬 专属研究与架构笔记 (Research Workspace)
-│   └── dsh-research/            # 本项目专属研究目录 (MY_README.md 与交互式 HTML 仪表盘)
+│   └── dsh-research/            # 本项目专属研究目录 (README.md、ARCHITECTURE.md 与 HTML 仪表盘)
 │
 └── 📄 根目录全局配置文件 (Configs)
     ├── pnpm-workspace.yaml      # 声明当前 Monorepo 包含的所有工作区子包路径
@@ -208,30 +211,47 @@ sequenceDiagram
 
 ## 🚀 4. 快速运行与常用命令
 
-### 4.1 启动模式
+> 📖 **完整运维与命令手册**：
+> 详细指令清单、环境变量配置、全套 Git 上游同步与排障指南请直接参阅：
+> - Markdown 版：[OPERATIONS.md](file:///c:/DeepSeek/deepseek-harness/dsh-research/OPERATIONS.md)
+> - 网页交互版：[html/operations.html](file:///c:/DeepSeek/deepseek-harness/dsh-research/html/operations.html)
+
+### 4.1 常用启动模式速查
 
 ```sh
 # 1. 编译构建整个工作区
-pnpm install
-pnpm run build
+pnpm install && pnpm run build
 
-# 2. 启动 Web 控制台 (默认 127.0.0.1:3080)
+# 2. 启动 Web 控制台 (默认 http://127.0.0.1:3080)
 pnpm dsh web
 
-# 3. 前端界面独立热更新开发 (推荐开发 UI 时使用)
+# 3. 前端界面独立热更新开发 (推荐开发定制 UI 时使用)
 cd apps/web && pnpm run dev
 
-# 4. 命令行 Headless 模式 (无界面单次任务)
+# 4. 命令行 Headless 模式 (无界面单次分析任务)
 pnpm dsh --profile headless "请分析当前项目的架构特点"
 
 # 5. 打印解析后的 Cordis 完整插件配置树 (诊断装配问题)
 pnpm dsh --profile web --dump-config
 
-# 6. 启动 ACP 自动化服务
+# 6. 启动 ACP 自动化协议服务
 pnpm run demo:acp
 ```
 
-### 4.2 工程与质量检查
+### 4.2 🔄 日常 3 步同步 DeepSeek 官方最新代码
+
+```sh
+# 1. 获取官方最新提交
+git fetch upstream
+
+# 2. 将官方 master 合并到当前研究分支
+git merge upstream/master
+
+# 3. 推送更新到个人云端 Fork 仓库
+git push origin my-branch
+```
+
+### 4.3 工程与质量检查
 
 ```sh
 pnpm run test            # Vitest 单元测试
@@ -259,77 +279,77 @@ pnpm run doc-sync        # 文档链接与双语同步检查
 ### 专题 ①：Agent Loop 核心调度与上下文控制
 * 🎯 **研究目标**：掌握 Agent 如何在多步骤中保持记忆、处理上下文溢出以及动态拦截 Prompt。
 * 📂 **核心源码**：
-  * 核心调度：[`packages/core/agent-loop`](file:///c:/DeepSeek/deepseek-harness/packages/core/agent-loop)
-  * 提示词组装：[`packages/core/system-prompt`](file:///c:/DeepSeek/deepseek-harness/packages/core/system-prompt)
-  * 会话日志：[`packages/core/session`](file:///c:/DeepSeek/deepseek-harness/packages/core/session)
-  * 上下文压缩：[`packages/compaction`](file:///c:/DeepSeek/deepseek-harness/packages/compaction)
-* 🔍 **关键机制**：
+  * [`packages/core/agent-loop`](file:///c:/DeepSeek/deepseek-harness/packages/core/agent-loop)
+  * [`packages/core/system-prompt`](file:///c:/DeepSeek/deepseek-harness/packages/core/system-prompt)
+  * [`packages/core/session`](file:///c:/DeepSeek/deepseek-harness/packages/core/session)
+* 🔍 **核心机制**：
   1. `agent/pre-step` 瀑布流拦截器：如何在模型请求前动态改写或拒绝消息。
   2. `deriveMessages()`：如何从纯追加的 `SessionEvent` 日志高效投影出模型历史。
-  3. 长对话压缩：当 Token 逼近上下文窗口时如何自动触发总结与状态剪裁。
+  3. 长对话压缩（[`packages/compaction`](file:///c:/DeepSeek/deepseek-harness/packages/compaction)）：当 Token 逼近上限时自动触发历史压缩。
 
 ---
 
 ### 专题 ②：扩展自定义 Tool 与 Skill 插件
 * 🎯 **研究目标**：为 Agent 注入操作本地软件、自定义数据库、私有 API 的专属能力。
 * 📂 **核心源码**：
-  * 工具注册中枢：[`packages/core/tools`](file:///c:/DeepSeek/deepseek-harness/packages/core/tools)
-  * 技能加载器：[`packages/skill`](file:///c:/DeepSeek/deepseek-harness/packages/skill)
-  * 实操参考：[`docs/cookbook/adding-a-tool.zh.md`](file:///c:/DeepSeek/deepseek-harness/docs/cookbook/adding-a-tool.zh.md)
-* 🔍 **关键机制**：
+  * [`packages/core/tools`](file:///c:/DeepSeek/deepseek-harness/packages/core/tools)
+  * [`packages/skill`](file:///c:/DeepSeek/deepseek-harness/packages/skill)
+  * [`docs/cookbook/adding-a-tool.zh.md`](file:///c:/DeepSeek/deepseek-harness/docs/cookbook/adding-a-tool.zh.md)
+* 🔍 **核心机制**：
   1. 使用 `ctx.tools.register()` 声明 Schema 与执行函数。
-  2. 执行流水线把关：`tools/pre-execute`（权限校验） $\to$ `tools/execute` $\to$ `tools/post-execute`（结果脱敏/截断）。
-  3. 声明前端渲染模式（`generic`、`terminal`、`diff`）。
+  2. 执行流水线把关：`tools/pre-execute` $\to$ `tools/execute` $\to$ `tools/post-execute`。
+  3. 声明前端渲染意图（`generic` / `terminal` / `diff`）。
 
 ---
 
 ### 专题 ③：多模型 LLM 适配器接入 (OpenAI / Claude / 本地 Ollama)
 * 🎯 **研究目标**：摆脱单一模型依赖，接入第三方云端 API 或本地部署模型。
 * 📂 **核心源码**：
-  * 模型适配总层：[`packages/llm`](file:///c:/DeepSeek/deepseek-harness/packages/llm)
-  * 实操参考：[`docs/cookbook/adding-an-llm-adapter.zh.md`](file:///c:/DeepSeek/deepseek-harness/docs/cookbook/adding-an-llm-adapter.zh.md)
-* 🔍 **关键机制**：
+  * [`packages/llm/`](file:///c:/DeepSeek/deepseek-harness/packages/llm)
+  * [`docs/cookbook/adding-an-llm-adapter.zh.md`](file:///c:/DeepSeek/deepseek-harness/docs/cookbook/adding-an-llm-adapter.zh.md)
+* 🔍 **核心机制**：
   1. 在 `ctx.llm` 注册统一适配器接口。
-  2. 将不同大模型的流式响应映射为标准事件流（`assistant/chunk`、`tool/call`）。
-  3. 配置自定义 BaseURL 与本地私有推理框架（vLLM / Ollama）。
+  2. 将各模型流式输出转换为 `assistant/chunk`、`tool/call` 等标准事件。
+  3. 支持本地部署框架（vLLM / Ollama / SGLang）的私密流式推理。
 
 ---
 
-### 专题 ④：Web UI 定制与跨平台桌面客户端 (Desktop App)
-* 🎯 **研究目标**：深度定制界面视觉交互，或将 Harness 打包为独立的 `.exe` / `.dmg` 桌面应用。
+### 专题 ④：Web UI 定制与跨平台桌面客户端开发
+* 🎯 **研究目标**：改造现有的 Web 控制台或将其封装为 Electron/Tauri 桌面端。
 * 📂 **核心源码**：
-  * 前端主入口：[`apps/web`](file:///c:/DeepSeek/deepseek-harness/apps/web)
-  * 侧边栏与会话：[`packages/client/ui-sidebar`](file:///c:/DeepSeek/deepseek-harness/packages/client/ui-sidebar)
-  * 对话流与气泡：[`packages/client/ui-conversation`](file:///c:/DeepSeek/deepseek-harness/packages/client/ui-conversation)
-  * 工具卡片：[`packages/client/ui-tool`](file:///c:/DeepSeek/deepseek-harness/packages/client/ui-tool)
-  * 主题系统：[`packages/client/ui-theme`](file:///c:/DeepSeek/deepseek-harness/packages/client/ui-theme)
-* 🔍 **关键机制**：
-  1. **React 18 + Vite** 前端组件解耦机制。
-  2. **桌面化方案**：引入 **Tauri** 或 **Electron**，将前端静态产物与 Node 后端打包为独立桌面客户端。
+  * [`apps/web/`](file:///c:/DeepSeek/deepseek-harness/apps/web)
+  * [`packages/api/`](file:///c:/DeepSeek/deepseek-harness/packages/api)
+  * [`packages/sdk/`](file:///c:/DeepSeek/deepseek-harness/packages/sdk)
+* 🔍 **核心机制**：
+  1. 基于 Typert RPC 与 BFF 层的强类型 WebSocket 通信。
+  2. 自定义 UI 卡片（代码对比、命令输出、审批弹窗）。
+  3. 响应式布局与深浅色主题。
 
 ---
 
-### 专题 ⑤：多 Agent 协作 (Subagents / Teams) 与工作流编排
-* 🎯 **研究目标**：实现主智能体将复杂任务拆解委派给子智能体，或组建专家团队协同作业。
+### 专题 ⑤：多 Agent 团队协作与工作流编排
+* 🎯 **研究目标**：实现复杂软件工程任务的主从协同（Planner + Coder + Reviewer）。
 * 📂 **核心源码**：
-  * 子代理分派：[`packages/subagent`](file:///c:/DeepSeek/deepseek-harness/packages/subagent)
-  * 计划跟踪：[`packages/plan`](file:///c:/DeepSeek/deepseek-harness/packages/plan)
-  * 工作流引擎：[`packages/workflow`](file:///c:/DeepSeek/deepseek-harness/packages/workflow)
-* 🔍 **关键机制**：
-  1. Subagent 工具：主 Agent 派发子会话并等待结果汇总结算。
-  2. Agent Teams 机制：持久化 Roster 成员花名册、Task Board 任务看板与 Mailbox 邮箱通信。
-  3. 基于 Worker 线程的长流程状态编排。
+  * [`packages/subagent/`](file:///c:/DeepSeek/deepseek-harness/packages/subagent)
+  * [`packages/workflow/`](file:///c:/DeepSeek/deepseek-harness/packages/workflow)
+  * [`packages/plan/`](file:///c:/DeepSeek/deepseek-harness/packages/plan)
+* 🔍 **核心机制**：
+  1. 子 Agent 派生与上下文隔离。
+  2. 基于 Worker Thread 的并发工作流。
+  3. 团队状态感知与进度汇总。
 
 ---
 
-### 专题 ⑥：底层安全沙箱隔离与权限审批
-* 🎯 **研究目标**：保障代码运行安全，防止 Agent 产生误删或破坏性行为。
+### 专题 ⑥：安全沙箱隔离与权限控制
+* 🎯 **研究目标**：保障 Agent 在本地环境执行操作的绝对安全性，防止越权。
 * 📂 **核心源码**：
-  * 安全沙箱：[`packages/sandbox`](file:///c:/DeepSeek/deepseek-harness/packages/sandbox)
-  * 交互与权限：[`packages/interaction`](file:///c:/DeepSeek/deepseek-harness/packages/interaction)
-* 🔍 **关键机制**：
-  1. 操作系统级隔离：Linux (Landlock / Bubblewrap)、macOS (Seatbelt) 的底层防护。
-  2. 敏感操作（高危 Shell、破坏性写入）弹出用户交互式确认窗口。
+  * [`packages/sandbox/`](file:///c:/DeepSeek/deepseek-harness/packages/sandbox)
+  * [`packages/interaction/permission`](file:///c:/DeepSeek/deepseek-harness/packages/interaction/permission)
+  * [`packages/guard/`](file:///c:/DeepSeek/deepseek-harness/packages/guard)
+* 🔍 **核心机制**：
+  1. 细粒度工具执行审批拦截。
+  2. 原生沙箱防护与路径隔离。
+  3. 死循环防护与调用超时熔断。
 
 ---
 
@@ -348,7 +368,7 @@ pnpm run doc-sync        # 文档链接与双语同步检查
 
 ## 🎨 7. HTML 文档生成规范与样式设计准则 (AI 维护协议)
 
-> ⚠️ **AI 助手必读准则**：后续当用户修改或扩充 `MY_README.md` 内容，并要求同步更新 `MY_README.html` 时，**必须严格遵循以下样式与组件规范，严禁破坏已确立的设计语言与主题风格！**
+> ⚠️ **AI 助手必读准则**：后续当用户修改或扩充 `ARCHITECTURE.md` 内容，并要求同步更新 `html/architecture.html` 时，**必须严格遵循以下样式与组件规范，严禁破坏已确立的设计语言与主题风格！**
 
 ### 7.1 视觉设计系统 (Design Tokens)
 
@@ -397,7 +417,7 @@ pnpm run doc-sync        # 文档链接与双语同步检查
    - 所有命令必须使用 `<div class="code-box"><button class="copy-btn" onclick="copyText('...')">复制</button><code>...</code></div>` 结构。
 
 ### 7.3 Markdown 到 HTML 的同步步骤
-当用户在 `MY_README.md` 中增加或修改内容时，AI 需按如下流程增量更新 `MY_README.html`：
+当用户在 `ARCHITECTURE.md` 中增加或修改内容时，AI 需按如下流程增量更新 `html/architecture.html`：
 1. **对比差异**：提取 Markdown 中的新增段落、表格或专题分析点。
 2. **组件套用**：将新增内容套入上述对应的 HTML 卡片模板（保留所有 class 属性与样式类）。
 3. **保持链接**：所有代码链接使用 `file:///c:/DeepSeek/deepseek-harness/...` 标准格式。

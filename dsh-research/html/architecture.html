@@ -661,6 +661,13 @@
       <li><a href="#docs-index">📚 官方参考文档</a></li>
     </ul>
 
+    <div class="nav-group-title">协同手册</div>
+    <ul class="nav-links">
+      <li><a href="operations.html">⚡ 常用命令与上游同步</a></li>
+      <li><a href="../ARCHITECTURE.md">📄 查看 Markdown 原文</a></li>
+      <li><a href="../README.md">📁 研究工作区主页</a></li>
+    </ul>
+
     <button class="theme-toggle-btn" id="themeToggle">
       <span>🌓 切换主题</span>
       <span id="themeLabel">Dark</span>
@@ -919,7 +926,20 @@ sequenceDiagram
         <h2>5. 快速运行与常用指令</h2>
       </div>
 
-      <div class="grid-2">
+      <div class="card" style="margin-bottom: 20px; background: linear-gradient(135deg, rgba(14, 165, 233, 0.12) 0%, rgba(168, 85, 247, 0.08) 100%); border-color: rgba(56, 189, 248, 0.3);">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+          <div>
+            <h4 style="font-size: 16px; margin-bottom: 4px;">📖 完整运维与命令操作手册已独立成册</h4>
+            <p style="color: var(--text-secondary); font-size: 13px;">包含完整环境初始化、API Key 配置、全套 Git 多端同步流及排障指南：</p>
+          </div>
+          <div style="display: flex; gap: 10px;">
+            <a href="operations.html" class="btn btn-primary" style="padding: 6px 14px; font-size: 13px; text-decoration: none; border-radius: 6px;">⚡ 打开交互式操作面板 (operations.html)</a>
+            <a href="../OPERATIONS.md" class="btn" style="padding: 6px 14px; font-size: 13px; text-decoration: none; border-radius: 6px;">📄 查看 OPERATIONS.md</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid-3">
         <div class="card">
           <div class="card-title cyan">⚡ 启动与调试命令</div>
 
@@ -943,6 +963,28 @@ sequenceDiagram
         </div>
 
         <div class="card">
+          <div class="card-title emerald">🔄 3 步同步官方代码</div>
+
+          <div class="code-box">
+            <button class="copy-btn" onclick="copyText('git fetch upstream')">复制</button>
+            <code>git fetch upstream</code>
+          </div>
+          <p style="font-size: 13px; margin-bottom: 10px;">拉取 DeepSeek 官方主仓最新提交</p>
+
+          <div class="code-box">
+            <button class="copy-btn" onclick="copyText('git merge upstream/master')">复制</button>
+            <code>git merge upstream/master</code>
+          </div>
+          <p style="font-size: 13px; margin-bottom: 10px;">将官方 master 合并到你的研究分支</p>
+
+          <div class="code-box">
+            <button class="copy-btn" onclick="copyText('git push origin my-branch')">复制</button>
+            <code>git push origin my-branch</code>
+          </div>
+          <p style="font-size: 13px;">推送更新到个人云端 Fork 仓库</p>
+        </div>
+
+        <div class="card">
           <div class="card-title purple">🧪 质量与工程检查</div>
 
           <div class="code-box">
@@ -958,10 +1000,10 @@ sequenceDiagram
           <p style="font-size: 13px; margin-bottom: 10px;">TypeScript 全局类型检查</p>
 
           <div class="code-box">
-            <button class="copy-btn" onclick="copyText('pnpm dsh --profile web --dump-config')">复制</button>
-            <code>pnpm dsh --profile web --dump-config</code>
+            <button class="copy-btn" onclick="copyText('pnpm run doc-sync')">复制</button>
+            <code>pnpm run doc-sync</code>
           </div>
-          <p style="font-size: 13px;">打印解析后的 Cordis 完整插件配置树</p>
+          <p style="font-size: 13px;">文档链接与双语同步门禁检查</p>
         </div>
       </div>
     </section>

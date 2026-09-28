@@ -1,0 +1,1253 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DeepSeek Harness (dsh) 架构全景与开发指南</title>
+  <!-- Google Fonts & Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Fira+Code:wght@400;500;600&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Mermaid.js for interactive diagrams -->
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    :root {
+      --bg-primary: #0b0f19;
+      --bg-secondary: #111827;
+      --bg-card: rgba(17, 24, 39, 0.75);
+      --bg-card-hover: rgba(31, 41, 55, 0.85);
+      --border-color: rgba(255, 255, 255, 0.08);
+      --border-focus: rgba(56, 189, 248, 0.5);
+
+      --text-primary: #f3f4f6;
+      --text-secondary: #9ca3af;
+      --text-muted: #6b7280;
+
+      --accent-blue: #0ea5e9;
+      --accent-cyan: #38bdf8;
+      --accent-purple: #818cf8;
+      --accent-emerald: #34d399;
+      --accent-amber: #fbbf24;
+      --accent-rose: #f43f5e;
+
+      --gradient-brand: linear-gradient(135deg, #0ea5e9 0%, #6366f1 50%, #a855f7 100%);
+      --gradient-dark: linear-gradient(180deg, rgba(15, 23, 42, 0.9) 0%, rgba(11, 15, 25, 0.95) 100%);
+      --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+
+      --sidebar-width: 280px;
+      --radius-sm: 8px;
+      --radius-md: 14px;
+      --radius-lg: 20px;
+    }
+
+    [data-theme="light"] {
+      --bg-primary: #f8fafc;
+      --bg-secondary: #ffffff;
+      --bg-card: rgba(255, 255, 255, 0.85);
+      --bg-card-hover: rgba(241, 245, 249, 0.95);
+      --border-color: rgba(0, 0, 0, 0.08);
+      --border-focus: rgba(14, 165, 233, 0.5);
+
+      --text-primary: #0f172a;
+      --text-secondary: #475569;
+      --text-muted: #94a3b8;
+
+      --glass-shadow: 0 8px 24px 0 rgba(148, 163, 184, 0.15);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', 'Noto Sans SC', system-ui, -apple-system, sans-serif;
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.65;
+      display: flex;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Background Ambient Glows */
+    .ambient-glow {
+      position: fixed;
+      top: -20%;
+      left: 20%;
+      width: 600px;
+      height: 600px;
+      background: radial-gradient(circle, rgba(14, 165, 233, 0.12) 0%, rgba(99, 102, 241, 0.05) 50%, transparent 70%);
+      filter: blur(80px);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .ambient-glow-2 {
+      position: fixed;
+      bottom: -20%;
+      right: 10%;
+      width: 500px;
+      height: 500px;
+      background: radial-gradient(circle, rgba(168, 85, 247, 0.08) 0%, transparent 70%);
+      filter: blur(80px);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Sidebar Navigation */
+    aside.sidebar {
+      width: var(--sidebar-width);
+      background: var(--bg-secondary);
+      border-right: 1px solid var(--border-color);
+      position: fixed;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      padding: 28px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      z-index: 50;
+      backdrop-filter: blur(16px);
+      overflow-y: auto;
+    }
+
+    .brand-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .brand-logo {
+      width: 38px;
+      height: 38px;
+      background: var(--gradient-brand);
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 18px;
+      color: #fff;
+      box-shadow: 0 4px 12px rgba(14, 165, 233, 0.35);
+    }
+
+    .brand-text h1 {
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+      line-height: 1.2;
+    }
+
+    .brand-text span {
+      font-size: 11px;
+      color: var(--accent-cyan);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .nav-group-title {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin: 12px 0 8px 8px;
+    }
+
+    .nav-links {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .nav-links a {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      border-radius: var(--radius-sm);
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 13.5px;
+      font-weight: 500;
+      transition: all 0.2s ease;
+    }
+
+    .nav-links a:hover, .nav-links a.active {
+      color: #fff;
+      background: rgba(14, 165, 233, 0.15);
+      border-left: 3px solid var(--accent-cyan);
+      padding-left: 11px;
+    }
+
+    [data-theme="light"] .nav-links a:hover,
+    [data-theme="light"] .nav-links a.active {
+      color: var(--accent-blue);
+      background: rgba(14, 165, 233, 0.1);
+    }
+
+    .theme-toggle-btn {
+      margin-top: auto;
+      padding: 10px 14px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      color: var(--text-primary);
+      font-size: 13px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .theme-toggle-btn:hover {
+      border-color: var(--accent-cyan);
+      background: var(--bg-card-hover);
+    }
+
+    /* Main Content Area */
+    main.content {
+      margin-left: var(--sidebar-width);
+      flex: 1;
+      padding: 40px 60px 100px 60px;
+      max-width: 1280px;
+      position: relative;
+      z-index: 10;
+    }
+
+    /* Hero Banner */
+    .hero-banner {
+      background: linear-gradient(135deg, rgba(14, 165, 233, 0.15) 0%, rgba(99, 102, 241, 0.1) 50%, rgba(168, 85, 247, 0.05) 100%);
+      border: 1px solid rgba(56, 189, 248, 0.25);
+      border-radius: var(--radius-lg);
+      padding: 36px 40px;
+      margin-bottom: 40px;
+      backdrop-filter: blur(12px);
+      box-shadow: var(--glass-shadow);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-banner::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 250px;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(56, 189, 248, 0.05));
+      pointer-events: none;
+    }
+
+    .hero-tags {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: 9999px;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.3px;
+    }
+
+    .badge-primary {
+      background: rgba(14, 165, 233, 0.2);
+      color: var(--accent-cyan);
+      border: 1px solid rgba(14, 165, 233, 0.4);
+    }
+
+    .badge-emerald {
+      background: rgba(52, 211, 153, 0.2);
+      color: var(--accent-emerald);
+      border: 1px solid rgba(52, 211, 153, 0.4);
+    }
+
+    .badge-purple {
+      background: rgba(168, 85, 247, 0.2);
+      color: var(--accent-purple);
+      border: 1px solid rgba(168, 85, 247, 0.4);
+    }
+
+    .hero-title {
+      font-size: 32px;
+      font-weight: 800;
+      line-height: 1.25;
+      margin-bottom: 12px;
+      background: linear-gradient(135deg, #ffffff 30%, var(--accent-cyan) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    [data-theme="light"] .hero-title {
+      background: linear-gradient(135deg, #0f172a 30%, var(--accent-blue) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .hero-desc {
+      font-size: 16px;
+      color: var(--text-secondary);
+      max-width: 820px;
+      line-height: 1.6;
+    }
+
+    /* Section Cards */
+    section.section-block {
+      margin-bottom: 50px;
+      scroll-margin-top: 30px;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+
+    .section-icon {
+      width: 34px;
+      height: 34px;
+      border-radius: var(--radius-sm);
+      background: rgba(14, 165, 233, 0.15);
+      color: var(--accent-cyan);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+    }
+
+    .section-header h2 {
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: -0.4px;
+    }
+
+    /* Card Grid */
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 20px;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+      gap: 24px;
+    }
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 24px;
+      backdrop-filter: blur(10px);
+      box-shadow: var(--glass-shadow);
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+    }
+
+    .card:hover {
+      background: var(--bg-card-hover);
+      border-color: var(--border-focus);
+      transform: translateY(-2px);
+      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.45);
+    }
+
+    .card-title {
+      font-size: 17px;
+      font-weight: 700;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .card-title.cyan { color: var(--accent-cyan); }
+    .card-title.purple { color: var(--accent-purple); }
+    .card-title.emerald { color: var(--accent-emerald); }
+    .card-title.amber { color: var(--accent-amber); }
+
+    .card p, .card ul {
+      color: var(--text-secondary);
+      font-size: 14px;
+    }
+
+    .card ul {
+      padding-left: 18px;
+      margin-top: 8px;
+    }
+
+    .card li {
+      margin-bottom: 6px;
+    }
+
+    /* Responsibilities Comparison Grid */
+    .comparison-container {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin-bottom: 24px;
+    }
+
+    @media (max-width: 900px) {
+      .comparison-container {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .comp-card {
+      border-radius: var(--radius-md);
+      padding: 26px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .comp-card.local {
+      background: linear-gradient(145deg, rgba(14, 165, 233, 0.12) 0%, rgba(15, 23, 42, 0.8) 100%);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+    }
+
+    .comp-card.cloud {
+      background: linear-gradient(145deg, rgba(129, 140, 248, 0.12) 0%, rgba(15, 23, 42, 0.8) 100%);
+      border: 1px solid rgba(129, 140, 248, 0.3);
+    }
+
+    .comp-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .comp-header h3 {
+      font-size: 18px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .feature-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      margin-bottom: 12px;
+      font-size: 14px;
+      color: var(--text-secondary);
+    }
+
+    .feature-item .icon {
+      font-size: 16px;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    /* Data Tables */
+    .table-container {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      overflow-x: auto;
+      box-shadow: var(--glass-shadow);
+      margin-top: 16px;
+    }
+
+    table.custom-table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 14px;
+    }
+
+    table.custom-table th {
+      background: rgba(255, 255, 255, 0.03);
+      color: var(--text-primary);
+      font-weight: 700;
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border-color);
+      white-space: nowrap;
+    }
+
+    table.custom-table td {
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border-color);
+      color: var(--text-secondary);
+      vertical-align: middle;
+    }
+
+    table.custom-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    table.custom-table tr:hover td {
+      background: rgba(255, 255, 255, 0.02);
+      color: var(--text-primary);
+    }
+
+    /* Interactive Tabs for Research Topics */
+    .tab-navigation {
+      display: flex;
+      gap: 8px;
+      border-bottom: 1px solid var(--border-color);
+      margin-bottom: 24px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+    }
+
+    .tab-btn {
+      padding: 10px 18px;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 14px;
+      font-weight: 600;
+      border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+      position: relative;
+    }
+
+    .tab-btn:hover {
+      color: var(--text-primary);
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .tab-btn.active {
+      color: var(--accent-cyan);
+      background: rgba(14, 165, 233, 0.1);
+    }
+
+    .tab-btn.active::after {
+      content: '';
+      position: absolute;
+      bottom: -4px;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: var(--accent-cyan);
+    }
+
+    .tab-pane {
+      display: none;
+      animation: fadeIn 0.3s ease;
+    }
+
+    .tab-pane.active {
+      display: block;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Code Blocks */
+    .code-box {
+      background: #060911;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: var(--radius-sm);
+      padding: 16px;
+      font-family: 'Fira Code', monospace;
+      font-size: 13.5px;
+      color: #e2e8f0;
+      overflow-x: auto;
+      position: relative;
+      margin: 12px 0;
+    }
+
+    .copy-btn {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      padding: 4px 10px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 4px;
+      color: #cbd5e1;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .copy-btn:hover {
+      background: var(--accent-cyan);
+      color: #000;
+    }
+
+    .mermaid-box {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 24px;
+      display: flex;
+      justify-content: center;
+      box-shadow: var(--glass-shadow);
+      margin: 20px 0;
+      overflow-x: auto;
+    }
+
+    /* Links */
+    a.doc-link {
+      color: var(--accent-cyan);
+      text-decoration: none;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+
+    a.doc-link:hover {
+      text-decoration: underline;
+      color: #fff;
+    }
+
+    /* Responsive */
+    @media (max-width: 1024px) {
+      aside.sidebar {
+        transform: translateX(-100%);
+        transition: transform 0.3s ease;
+      }
+      aside.sidebar.open {
+        transform: translateX(0);
+      }
+      main.content {
+        margin-left: 0;
+        padding: 24px 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="ambient-glow"></div>
+  <div class="ambient-glow-2"></div>
+
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="brand-header">
+      <div class="brand-logo">dsh</div>
+      <div class="brand-text">
+        <h1>DeepSeek Harness</h1>
+        <span>Architecture Hub</span>
+      </div>
+    </div>
+
+    <div class="nav-group-title">导航目录</div>
+    <ul class="nav-links">
+      <li><a href="#overview" class="active">🌟 核心哲学与架构</a></li>
+      <li><a href="#responsibilities">⚖️ 本地 vs 云端分工</a></li>
+      <li><a href="#monorepo">📂 Monorepo 仓库全景</a></li>
+      <li><a href="#agent-loop">🔄 Agent Loop 调度机制</a></li>
+      <li><a href="#quick-start">🚀 快速启动与命令</a></li>
+      <li><a href="#research-tracks">🔬 六大专题研究路线</a></li>
+      <li><a href="#docs-index">📚 官方参考文档</a></li>
+    </ul>
+
+    <div class="nav-group-title">协同手册</div>
+    <ul class="nav-links">
+      <li><a href="operations.html">⚡ 常用命令与上游同步</a></li>
+      <li><a href="../ARCHITECTURE.md">📄 查看 Markdown 原文</a></li>
+      <li><a href="../README.md">📁 研究工作区主页</a></li>
+    </ul>
+
+    <button class="theme-toggle-btn" id="themeToggle">
+      <span>🌓 切换主题</span>
+      <span id="themeLabel">Dark</span>
+    </button>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="content">
+
+    <!-- Hero Header -->
+    <header class="hero-banner" id="overview">
+      <div class="hero-tags">
+        <span class="badge badge-primary">DeepSeek AI 官方开源</span>
+        <span class="badge badge-purple">Cordis 微内核驱动</span>
+        <span class="badge badge-emerald">MIT 开源协议</span>
+      </div>
+      <h1 class="hero-title">DeepSeek Harness (`dsh`)<br>架构全景与二次开发指南</h1>
+      <p class="hero-desc">
+        面向大语言模型（LLM）的开源 Agent 运行底座与执行调度框架。系统采用<strong>“一切皆插件”</strong>的纯解耦设计，为智能体提供安全隔离、确定性事件溯源与全平台操作调度能力。
+      </p>
+    </header>
+
+    <!-- 1. 核心设计三原则 -->
+    <section class="section-block">
+      <div class="section-header">
+        <div class="section-icon">🧩</div>
+        <h2>1. 核心设计三原则</h2>
+      </div>
+      <div class="grid-3">
+        <div class="card">
+          <div class="card-title cyan">一切皆插件 (Plugin-First)</div>
+          <p>基于 <strong>Cordis 微内核</strong>，系统内不存在特权内核。从 LLM 适配器、文件读写、持久化终端到 Agent Loop 调度循环本身全部以插件挂载，可热插拔与配置覆写。</p>
+        </div>
+        <div class="card">
+          <div class="card-title purple">模型可见即已记录 (Logged)</div>
+          <p>采用 <strong>事件溯源（Event Sourcing）</strong> 架构。进入模型请求的所有输入、思维链、工具调用及结果均被严格持久化为 <code>SessionEvent</code>，支持 100% 状态重放与分支派生。</p>
+        </div>
+        <div class="card">
+          <div class="card-title emerald">能力解耦 (Capability Seams)</div>
+          <p>严格三层解耦：<strong>接口定义 (Service Definition)</strong> $\to$ <strong>服务实现 (Provider)</strong> $\to$ <strong>消费端 (Consumer)</strong>。切换底层环境（如切到 Docker/沙箱）无需重写工具或重训模型。</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. 本地 vs 云端分工全景 -->
+    <section class="section-block" id="responsibilities">
+      <div class="section-header">
+        <div class="section-icon">⚖️</div>
+        <h2>2. 本地 Harness 与云端大模型的分工全景</h2>
+      </div>
+
+      <div class="comparison-container">
+        <!-- Local Harness -->
+        <div class="comp-card local">
+          <div class="comp-header">
+            <h3>💻 本地 Harness (身体与双手)</h3>
+            <span class="badge badge-primary">执行与感知中枢</span>
+          </div>
+          <div class="feature-item">
+            <span class="icon">🖥️</span>
+            <div><strong>交互与界面</strong>：提供 Web 控制台、React 对话流、代码 Diff 预览与 CLI 命令。</div>
+          </div>
+          <div class="feature-item">
+            <span class="icon">📂</span>
+            <div><strong>工作区管理</strong>：本地工程代码扫描、AST 分析、文件读写与修改落地。</div>
+          </div>
+          <div class="feature-item">
+            <span class="icon">⚡</span>
+            <div><strong>命令与代码执行</strong>：在你的电脑上真实启动 PowerShell / Bash 进程执行测试与构建。</div>
+          </div>
+          <div class="feature-item">
+            <span class="icon">🛡️</span>
+            <div><strong>安全沙箱与审批</strong>：底层进程沙箱防护（Landlock/Bubblewrap），拦截危险指令。</div>
+          </div>
+          <div class="feature-item">
+            <span class="icon">💾</span>
+            <div><strong>数据持久化</strong>：会话历史、断点恢复记录保存在本地硬盘（<code>~/.dsh</code>）。</div>
+          </div>
+        </div>
+
+        <!-- Cloud Brain -->
+        <div class="comp-card cloud">
+          <div class="comp-header">
+            <h3>☁️ DeepSeek 云端后台 (大脑)</h3>
+            <span class="badge badge-purple">思考与决策集群</span>
+          </div>
+          <div class="feature-item">
+            <span class="icon">🧠</span>
+            <div><strong>推理计算集群</strong>：运行 DeepSeek-V3 / DeepSeek-R1 大模型。</div>
+          </div>
+          <div class="feature-item">
+            <span class="icon">💡</span>
+            <div><strong>意图与上下文理解</strong>：理解用户下达的 Prompt 需求与多轮对话历史。</div>
+          </div>
+          <div class="feature-item">
+            <span class="icon">🔗</span>
+            <div><strong>长链思考 (CoT)</strong>：进行深度推理，生成决策步骤与思维链。</div>
+          </div>
+          <div class="feature-item">
+            <span class="icon">🎯</span>
+            <div><strong>工具调用决策</strong>：决定调用哪个 Tool（如 <code>execute_shell</code>）并生成入参 JSON。</div>
+          </div>
+          <div class="feature-item">
+            <span class="icon">🔒</span>
+            <div><strong>无硬盘访问权</strong>：云端无法直接访问你的硬盘，也不提供代码执行环境。</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 隐私与离线亮点 -->
+      <div class="card" style="border-left: 4px solid var(--accent-emerald);">
+        <div class="card-title emerald">🔒 数据隐私与完全离线运行能力</div>
+        <p style="margin-bottom: 6px;">1. <strong>代码零静默上传</strong>：云端无文件系统权限，仅随 Prompt 发送显式读取的代码片段。</p>
+        <p style="margin-bottom: 6px;">2. <strong>命令 100% 本地执行</strong>：模型仅返回 JSON 指令，本地 Harness 在你的电脑上真实拉起进程。</p>
+        <p>3. <strong>支持完全离线</strong>：利用 <code>packages/llm</code> 适配层，可一键切换为本地 <strong>Ollama / vLLM</strong>，实现 0 数据上云的完全私密运行。</p>
+      </div>
+    </section>
+
+    <!-- 3. Monorepo 全景与核心模块 -->
+    <section class="section-block" id="monorepo">
+      <div class="section-header">
+        <div class="section-icon">📂</div>
+        <h2>3. 代码仓库与 Monorepo 全景架构</h2>
+      </div>
+
+      <p style="color: var(--text-secondary); margin-bottom: 16px;">
+        本项目基于 <strong>pnpm workspaces</strong> 聚合了 50 多个独立的 npm 子包，子包间通过 <code>workspace:^</code> 软链接实时联动，修改任意模块本地立即生效。
+      </p>
+
+      <div class="table-container">
+        <table class="custom-table">
+          <thead>
+            <tr>
+              <th>模块分类</th>
+              <th>源码包路径</th>
+              <th>挂载属性 (<code>ctx.*</code>)</th>
+              <th>核心职责与说明</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>会话与持久化</strong></td>
+              <td><a class="doc-link" href="file:///c:/DeepSeek/deepseek-harness/packages/core/session">packages/core/session</a></td>
+              <td><code>ctx.sessions</code></td>
+              <td>仅追加日志、状态持久化恢复与会话分支 Fork</td>
+            </tr>
+            <tr>
+              <td><strong>提示词组装</strong></td>
+              <td><a class="doc-link" href="file:///c:/DeepSeek/deepseek-harness/packages/core/system-prompt">packages/core/system-prompt</a></td>
+              <td><code>ctx.systemPrompt</code></td>
+              <td>动态拼接 Prompt 片段、工作区 AGENTS.md 与 Tool Schemas</td>
+            </tr>
+            <tr>
+              <td><strong>工具流水线</strong></td>
+              <td><a class="doc-link" href="file:///c:/DeepSeek/deepseek-harness/packages/core/tools">packages/core/tools</a></td>
+              <td><code>ctx.tools</code></td>
+              <td>工具注册、参数校验、前/后拦截执行流水线</td>
+            </tr>
+            <tr>
+              <td><strong>驱动循环</strong></td>
+              <td><a class="doc-link" href="file:///c:/DeepSeek/deepseek-harness/packages/core/agent-loop">packages/core/agent-loop</a></td>
+              <td><code>ctx.agentLoop</code></td>
+              <td>驱动单轮次/多步骤的 Agent 决策引擎</td>
+            </tr>
+            <tr>
+              <td><strong>模型适配</strong></td>
+              <td><a class="doc-link" href="file:///c:/DeepSeek/deepseek-harness/packages/llm">packages/llm/</a></td>
+              <td><code>ctx.llm</code></td>
+              <td>统一模型流式事件词汇表与各 Provider 适配器</td>
+            </tr>
+            <tr>
+              <td><strong>环境与执行</strong></td>
+              <td>
+                <a class="doc-link" href="file:///c:/DeepSeek/deepseek-harness/packages/fs">packages/fs</a> /
+                <a class="doc-link" href="file:///c:/DeepSeek/deepseek-harness/packages/shell">shell</a> /
+                <a class="doc-link" href="file:///c:/DeepSeek/deepseek-harness/packages/terminal">terminal</a>
+              </td>
+              <td><code>ctx.fs</code><br><code>ctx.shell</code><br><code>ctx.terminals</code></td>
+              <td>跨平台文件读写、命令执行与持久化 PTY 终端</td>
+            </tr>
+            <tr>
+              <td><strong>安全与沙箱</strong></td>
+              <td><a class="doc-link" href="file:///c:/DeepSeek/deepseek-harness/packages/sandbox">packages/sandbox</a></td>
+              <td><code>ctx.sandbox</code></td>
+              <td>底层进程沙箱隔离（Landlock/Bubblewrap）与权限审批流</td>
+            </tr>
+            <tr>
+              <td><strong>进阶协作</strong></td>
+              <td>
+                <a class="doc-link" href="file:///c:/DeepSeek/deepseek-harness/packages/subagent">packages/subagent</a> /
+                <a class="doc-link" href="file:///c:/DeepSeek/deepseek-harness/packages/plan">plan</a> /
+                <a class="doc-link" href="file:///c:/DeepSeek/deepseek-harness/packages/workflow">workflow</a>
+              </td>
+              <td><code>ctx.subagents</code><br><code>ctx.workflows</code></td>
+              <td>任务委派、Agent Teams 团队协作与工作流编排</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 4. 智能体调度循环 -->
+    <section class="section-block" id="agent-loop">
+      <div class="section-header">
+        <div class="section-icon">🔄</div>
+        <h2>4. 智能体核心调度循环 (Agent Loop Lifecycle)</h2>
+      </div>
+
+      <p style="color: var(--text-secondary); margin-bottom: 16px;">
+        Agent 的单次交互为一个 <strong>轮次（Turn）</strong>，一个轮次内部由一个或多个 <strong>步骤（Step）</strong> 组成。
+      </p>
+
+      <div class="mermaid-box">
+        <pre class="mermaid">
+sequenceDiagram
+    autonumber
+    participant User as 用户 / Inbox
+    participant Loop as Agent Loop (调度中枢)
+    participant Prompt as System Prompt (组装器)
+    participant LLM as 模型服务 (ctx.llm)
+    participant Tools as 工具流水线 (ctx.tools)
+    participant Log as 会话日志 (Session Log)
+
+    Note over Loop: turn/start (开启轮次)
+    User->>Loop: 领取输入消息 (Inbox Claim)
+    Loop->>Prompt: 组装 Prompt 片段 + Tool Schemas
+    Loop->>Loop: 触发 waterfall: agent/pre-step (可改写/拦截)
+
+    rect rgba(14, 165, 233, 0.08)
+        Note over Loop: step/start (进入单步执行)
+        Loop->>Log: 追加 user/message 持久化事件
+        Loop->>Log: deriveMessages() 派生历史上下文
+        Loop->>LLM: 发起请求 (agent/request -> llm/stream)
+        LLM-->>Loop: 流式返回 assistant/chunk* -> assistant/message
+
+        opt 存在工具调用 (Tool Calls)
+            Loop->>Tools: tools/pre-execute (权限校验/审批)
+            Tools->>Tools: tools/execute (执行底层文件/命令)
+            Tools->>Tools: tools/post-execute (结果过滤)
+            Tools->>Log: 追加 tool/result* 持久化事件
+        end
+        Note over Loop: step/end (单步结束)
+    end
+
+    Note over Loop: 若工具产生后续需求，循环进入下一个 Step
+    Loop->>Loop: 触发 serial: agent/turn-stopping
+    Note over Loop: turn/end (轮次关闭)
+        </pre>
+      </div>
+    </section>
+
+    <!-- 5. 快速启动与常用命令 -->
+    <section class="section-block" id="quick-start">
+      <div class="section-header">
+        <div class="section-icon">🚀</div>
+        <h2>5. 快速运行与常用指令</h2>
+      </div>
+
+      <div class="card" style="margin-bottom: 20px; background: linear-gradient(135deg, rgba(14, 165, 233, 0.12) 0%, rgba(168, 85, 247, 0.08) 100%); border-color: rgba(56, 189, 248, 0.3);">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+          <div>
+            <h4 style="font-size: 16px; margin-bottom: 4px;">📖 完整运维与命令操作手册已独立成册</h4>
+            <p style="color: var(--text-secondary); font-size: 13px;">包含完整环境初始化、API Key 配置、全套 Git 多端同步流及排障指南：</p>
+          </div>
+          <div style="display: flex; gap: 10px;">
+            <a href="operations.html" class="btn btn-primary" style="padding: 6px 14px; font-size: 13px; text-decoration: none; border-radius: 6px;">⚡ 打开交互式操作面板 (operations.html)</a>
+            <a href="../OPERATIONS.md" class="btn" style="padding: 6px 14px; font-size: 13px; text-decoration: none; border-radius: 6px;">📄 查看 OPERATIONS.md</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid-3">
+        <div class="card">
+          <div class="card-title cyan">⚡ 启动与调试命令</div>
+
+          <div class="code-box">
+            <button class="copy-btn" onclick="copyText('pnpm dsh web')">复制</button>
+            <code>pnpm dsh web</code>
+          </div>
+          <p style="font-size: 13px; margin-bottom: 10px;">启动本地 Web UI 界面（默认 127.0.0.1:3080）</p>
+
+          <div class="code-box">
+            <button class="copy-btn" onclick="copyText('cd apps/web && pnpm run dev')">复制</button>
+            <code>cd apps/web && pnpm run dev</code>
+          </div>
+          <p style="font-size: 13px; margin-bottom: 10px;">前端界面独立热更新调试（UI 定制推荐）</p>
+
+          <div class="code-box">
+            <button class="copy-btn" onclick="copyText('pnpm dsh --profile headless &quot;task&quot;')">复制</button>
+            <code>pnpm dsh --profile headless "分析当前项目"</code>
+          </div>
+          <p style="font-size: 13px;">命令行 Headless 无界面运行单次任务</p>
+        </div>
+
+        <div class="card">
+          <div class="card-title emerald">🔄 3 步同步官方代码</div>
+
+          <div class="code-box">
+            <button class="copy-btn" onclick="copyText('git fetch upstream')">复制</button>
+            <code>git fetch upstream</code>
+          </div>
+          <p style="font-size: 13px; margin-bottom: 10px;">拉取 DeepSeek 官方主仓最新提交</p>
+
+          <div class="code-box">
+            <button class="copy-btn" onclick="copyText('git merge upstream/master')">复制</button>
+            <code>git merge upstream/master</code>
+          </div>
+          <p style="font-size: 13px; margin-bottom: 10px;">将官方 master 合并到你的研究分支</p>
+
+          <div class="code-box">
+            <button class="copy-btn" onclick="copyText('git push origin my-branch')">复制</button>
+            <code>git push origin my-branch</code>
+          </div>
+          <p style="font-size: 13px;">推送更新到个人云端 Fork 仓库</p>
+        </div>
+
+        <div class="card">
+          <div class="card-title purple">🧪 质量与工程检查</div>
+
+          <div class="code-box">
+            <button class="copy-btn" onclick="copyText('pnpm run test')">复制</button>
+            <code>pnpm run test</code>
+          </div>
+          <p style="font-size: 13px; margin-bottom: 10px;">运行 Vitest 单元测试</p>
+
+          <div class="code-box">
+            <button class="copy-btn" onclick="copyText('pnpm run typecheck')">复制</button>
+            <code>pnpm run typecheck</code>
+          </div>
+          <p style="font-size: 13px; margin-bottom: 10px;">TypeScript 全局类型检查</p>
+
+          <div class="code-box">
+            <button class="copy-btn" onclick="copyText('pnpm run doc-sync')">复制</button>
+            <code>pnpm run doc-sync</code>
+          </div>
+          <p style="font-size: 13px;">文档链接与双语同步门禁检查</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. 六大专题研究与二次开发路线 -->
+    <section class="section-block" id="research-tracks">
+      <div class="section-header">
+        <div class="section-icon">🔬</div>
+        <h2>6. 六大专题研究与二次开发路线</h2>
+      </div>
+
+      <!-- Tab Buttons -->
+      <div class="tab-navigation">
+        <button class="tab-btn active" onclick="switchTab(event, 'tab-1')">① Agent Loop 调度</button>
+        <button class="tab-btn" onclick="switchTab(event, 'tab-2')">② 扩展 Tool / Skill</button>
+        <button class="tab-btn" onclick="switchTab(event, 'tab-3')">③ 多模型 LLM 接入</button>
+        <button class="tab-btn" onclick="switchTab(event, 'tab-4')">④ Web UI / 桌面端</button>
+        <button class="tab-btn" onclick="switchTab(event, 'tab-5')">⑤ 多 Agent 协作</button>
+        <button class="tab-btn" onclick="switchTab(event, 'tab-6')">⑥ 安全沙箱与权限</button>
+      </div>
+
+      <!-- Tab Panes -->
+      <div class="tab-pane active" id="tab-1">
+        <div class="card">
+          <div class="card-title cyan">专题 ①：Agent Loop 核心调度与上下文控制</div>
+          <p><strong>🎯 研究目标</strong>：掌握 Agent 如何在多步骤中保持记忆、处理上下文溢出以及动态拦截 Prompt。</p>
+          <ul style="margin: 12px 0;">
+            <li><strong>📂 核心源码</strong>：
+              <a class="doc-link" href="file:///c:/DeepSeek/deepseek-harness/packages/core/agent-loop">packages/core/agent-loop</a>、
+              <a class="doc-link" href="file:///c:/DeepSeek/deepseek-harness/packages/core/system-prompt">packages/core/system-prompt</a>、
+              <a class="doc-link" href="file:///c:/DeepSeek/deepseek-harness/packages/core/session">packages/core/session</a>
+            </li>
+            <li><strong>🔍 核心机制</strong>：
+              <ol style="padding-left: 20px; margin-top: 6px;">
+                <li><code>agent/pre-step</code> 瀑布流拦截器：如何在模型请求前动态改写或拒绝消息。</li>
+                <li><code>deriveMessages()</code>：如何从纯追加的 <code>SessionEvent</code> 日志高效投影出模型历史。</li>
+                <li>长对话压缩（<code>packages/compaction</code>）：当 Token 逼近上限时自动触发历史压缩。</li>
+              </ol>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="tab-pane" id="tab-2">
+        <div class="card">
+          <div class="card-title purple">专题 ②：扩展自定义 Tool 与 Skill 插件</div>
+          <p><strong>🎯 研究目标</strong>：为 Agent 注入操作本地软件、自定义数据库、私有 API 的专属能力。</p>
+          <ul style="margin: 12px 0;">
+            <li><strong>📂 核心源码</strong>：
+              <a class="doc-link" href="file:///c:/DeepSeek/deepseek-harness/packages/core/tools">packages/core/tools</a>、
+              <a class="doc-link" href="file:///c:/DeepSeek/deepseek-harness/packages/skill">packages/skill</a>、
+              <a class="doc-link" href="file:///c:/DeepSeek/deepseek-harness/docs/cookbook/adding-a-tool.zh.md">docs/cookbook/adding-a-tool.zh.md</a>
+            </li>
+            <li><strong>🔍 核心机制</strong>：
+              <ol style="padding-left: 20px; margin-top: 6px;">
+                <li>使用 <code>ctx.tools.register()</code> 声明 Schema 与执行函数。</li>
+                <li>执行流水线把关：<code>tools/pre-execute</code> $\to$ <code>tools/execute</code> $\to$ <code>tools/post-execute</code>。</li>
+                <li>声明前端渲染意图（<code>generic</code> / <code>terminal</code> / <code>diff</code>）。</li>
+              </ol>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="tab-pane" id="tab-3">
+        <div class="card">
+          <div class="card-title emerald">专题 ③：多模型 LLM 适配器接入 (OpenAI / Claude / 本地 Ollama)</div>
+          <p><strong>🎯 研究目标</strong>：摆脱单一模型依赖，接入第三方云端 API 或本地部署模型。</p>
+          <ul style="margin: 12px 0;">
+            <li><strong>📂 核心源码</strong>：
+              <a class="doc-link" href="file:///c:/DeepSeek/deepseek-harness/packages/llm">packages/llm/</a>、
+              <a class="doc-link" href="file:///c:/DeepSeek/deepseek-harness/docs/cookbook/adding-an-llm-adapter.zh.md">docs/cookbook/adding-an-llm-adapter.zh.md</a>
+            </li>
+            <li><strong>🔍 核心机制</strong>：
+              <ol style="padding-left: 20px; margin-top: 6px;">
+                <li>在 <code>ctx.llm</code> 注册统一适配器接口。</li>
+                <li>将各模型流式输出转换为 <code>assistant/chunk</code>、<code>tool/call</code> 等标准事件。</li>
+                <li>支持本地部署框架（vLLM / Ollama / SGLang）的私密流式推理。</li>
+              </ol>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="tab-pane" id="tab-4">
+        <div class="card">
+          <div class="card-title amber">专题 ④：Web UI 定制与跨平台桌面客户端 (Desktop App)</div>
+          <p><strong>🎯 研究目标</strong>：深度定制界面交互，或将 Harness 打包为独立的 <code>.exe</code> / <code>.dmg</code> 桌面软件。</p>
+          <ul style="margin: 12px 0;">
+            <li><strong>📂 核心源码</strong>：
+              <a class="doc-link" href="file:///c:/DeepSeek/deepseek-harness/apps/web">apps/web</a>、
+              <a class="doc-link" href="file:///c:/DeepSeek/deepseek-harness/packages/client">packages/client/</a>
+            </li>
+            <li><strong>🔍 核心机制</strong>：
+              <ol style="padding-left: 20px; margin-top: 6px;">
+                <li>前端采用 <strong>React 18 + Vite</strong> 架构，模块间高度解耦（侧边栏、对话气泡、主题配色）。</li>
+                <li><strong>桌面化方案</strong>：引入 <strong>Tauri</strong> 或 <strong>Electron</strong>，将前端静态产物与 Node 后端打包封装为本地安装程序。</li>
+              </ol>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="tab-pane" id="tab-5">
+        <div class="card">
+          <div class="card-title cyan">专题 ⑤：多 Agent 协作 (Subagents / Teams) 与工作流编排</div>
+          <p><strong>🎯 研究目标</strong>：实现主智能体将复杂任务拆解委派给子智能体，或组建专家团队协同作业。</p>
+          <ul style="margin: 12px 0;">
+            <li><strong>📂 核心源码</strong>：
+              <a class="doc-link" href="file:///c:/DeepSeek/deepseek-harness/packages/subagent">packages/subagent</a>、
+              <a class="doc-link" href="file:///c:/DeepSeek/deepseek-harness/packages/plan">packages/plan</a>、
+              <a class="doc-link" href="file:///c:/DeepSeek/deepseek-harness/packages/workflow">packages/workflow</a>
+            </li>
+            <li><strong>🔍 核心机制</strong>：
+              <ol style="padding-left: 20px; margin-top: 6px;">
+                <li>Subagent 任务委派：主 Agent 发起子会话并等待结果结算。</li>
+                <li>Agent Teams：持久化 Roster 成员花名册、Task Board 任务看板与 Mailbox 邮箱通信。</li>
+                <li>基于 Worker 线程的长流程状态编排。</li>
+              </ol>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="tab-pane" id="tab-6">
+        <div class="card">
+          <div class="card-title purple">专题 ⑥：底层安全沙箱隔离与权限审批</div>
+          <p><strong>🎯 研究目标</strong>：保障代码运行安全，防止 Agent 产生误删或破坏性行为。</p>
+          <ul style="margin: 12px 0;">
+            <li><strong>📂 核心源码</strong>：
+              <a class="doc-link" href="file:///c:/DeepSeek/deepseek-harness/packages/sandbox">packages/sandbox</a>、
+              <a class="doc-link" href="file:///c:/DeepSeek/deepseek-harness/packages/interaction">packages/interaction</a>
+            </li>
+            <li><strong>🔍 关键机制</strong>：
+              <ol style="padding-left: 20px; margin-top: 6px;">
+                <li>操作系统底层防护：Linux (Landlock / Bubblewrap)、macOS (Seatbelt)。</li>
+                <li>敏感操作（高危 Shell 命令、破坏性写入）弹出用户交互式确认窗口。</li>
+              </ol>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7. 官方文档索引 -->
+    <section class="section-block" id="docs-index">
+      <div class="section-header">
+        <div class="section-icon">📚</div>
+        <h2>7. 官方核心文档与扩展手册</h2>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-title cyan">📘 架构与规范文档</div>
+          <ul>
+            <li><a class="doc-link" href="file:///c:/DeepSeek/deepseek-harness/docs/architecture.zh.md">docs/architecture.zh.md</a> - 官方架构设计与核心概念</li>
+            <li><a class="doc-link" href="file:///c:/DeepSeek/deepseek-harness/docs/cordis-primer.zh.md">docs/cordis-primer.zh.md</a> - Cordis 插件框架入门指南</li>
+            <li><a class="doc-link" href="file:///c:/DeepSeek/deepseek-harness/docs/capability-seams.zh.md">docs/capability-seams.zh.md</a> - 能力 Seams 完整图解</li>
+          </ul>
+        </div>
+
+        <div class="card">
+          <div class="card-title purple">📖 扩展实操手册 (Cookbook)</div>
+          <ul>
+            <li><a class="doc-link" href="file:///c:/DeepSeek/deepseek-harness/docs/cookbook/adding-a-tool.zh.md">docs/cookbook/adding-a-tool.zh.md</a> - 添加新工具 (Tool)</li>
+            <li><a class="doc-link" href="file:///c:/DeepSeek/deepseek-harness/docs/cookbook/adding-an-llm-adapter.zh.md">docs/cookbook/adding-an-llm-adapter.zh.md</a> - 接入新 LLM 适配器</li>
+            <li><a class="doc-link" href="file:///c:/DeepSeek/deepseek-harness/docs/cookbook/adding-a-conversation-node.zh.md">docs/cookbook/adding-a-conversation-node.zh.md</a> - 添加对话流渲染节点</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    // Initialize Mermaid
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'dark',
+      securityLevel: 'loose',
+      fontFamily: 'Plus Jakarta Sans, sans-serif'
+    });
+
+    // Theme Toggle
+    const themeBtn = document.getElementById('themeToggle');
+    const themeLabel = document.getElementById('themeLabel');
+    let currentTheme = 'dark';
+
+    themeBtn.addEventListener('click', () => {
+      currentTheme = currentTheme === 'dark' ? 'light' : 'dark';
+      document.body.setAttribute('data-theme', currentTheme);
+      themeLabel.textContent = currentTheme === 'dark' ? 'Dark' : 'Light';
+
+      // Update Mermaid theme
+      mermaid.initialize({
+        theme: currentTheme === 'dark' ? 'dark' : 'default'
+      });
+    });
+
+    // Tab Switcher
+    function switchTab(e, tabId) {
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      document.querySelectorAll('.tab-pane').forEach(pane => pane.classList.remove('active'));
+
+      e.currentTarget.classList.add('active');
+      document.getElementById(tabId).classList.add('active');
+    }
+
+    // Copy to Clipboard
+    function copyText(text) {
+      navigator.clipboard.writeText(text).then(() => {
+        const btn = event.target;
+        const originalText = btn.textContent;
+        btn.textContent = '已复制!';
+        btn.style.background = 'var(--accent-emerald)';
+        btn.style.color = '#000';
+        setTimeout(() => {
+          btn.textContent = originalText;
+          btn.style.background = '';
+          btn.style.color = '';
+        }, 1500);
+      });
+    }
+
+    // Scrollspy for Sidebar
+    const sections = document.querySelectorAll('section, header');
+    const navLinks = document.querySelectorAll('.nav-links a');
+
+    window.addEventListener('scroll', () => {
+      let current = '';
+      sections.forEach(section => {
+        const sectionTop = section.offsetTop;
+        if (pageYOffset >= sectionTop - 120) {
+          current = section.getAttribute('id');
+        }
+      });
+
+      navLinks.forEach(link => {
+        link.classList.remove('active');
+        if (link.getAttribute('href') === `#${current}`) {
+          link.classList.add('active');
+        }
+      });
+    });
+  </script>
+</body>
+</html>
